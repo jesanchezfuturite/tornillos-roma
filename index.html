@@ -585,29 +585,30 @@
                 <form id="contactForm" class="needs-validation" novalidate>
                     <div class="mb-3">
                         <label for="nombre" class="form-label">Nombre y Apellido</label>
-                        <input type="text" class="form-control" id="nombre" required>
+                        <input type="text" class="form-control" id="nombre" name="nombre" required>
                         <div class="invalid-feedback">Por favor ingrese su nombre.</div>
                     </div>
                     <div class="mb-3">
                         <label for="email" class="form-label">Correo electrónico</label>
-                        <input type="email" class="form-control" id="email" required>
+                        <input type="email" class="form-control" id="email" name="correo" required>
                         <div class="invalid-feedback">Por favor ingrese un correo válido.</div>
                     </div>
                     <div class="mb-3">
                         <label for="telefono" class="form-label">Número de teléfono</label>
-                        <input type="tel" class="form-control" id="telefono" required>
+                        <input type="tel" class="form-control" id="telefono" name="telefono" required>
                         <div class="invalid-feedback">Por favor ingrese su número de teléfono.</div>
                     </div>
                     <div class="mb-3">
                         <label for="empresa" class="form-label">Empresa</label>
-                        <input type="text" class="form-control" id="empresa" required>
+                        <input type="text" class="form-control" id="empresa" name="empresa" required>
                         <div class="invalid-feedback">Por favor ingrese el nombre de su empresa.</div>
                     </div>
                     <div class="mb-4">
                         <label for="mensaje" class="form-label">¿En qué te podemos ayudar?</label>
-                        <textarea class="form-control" id="mensaje" rows="4" required></textarea>
+                        <textarea class="form-control" id="mensaje" name="mensaje" rows="4" required></textarea>
                         <div class="invalid-feedback">Por favor ingrese su mensaje.</div>
                     </div>
+
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary-custom btn-lg">Enviar</button>
                     </div>
@@ -635,16 +636,75 @@
             // Form Validation and Submission
             const form = document.getElementById('contactForm');
 
+            // UTM Parsing Logic
+            function getUTMParameters() {
+                const params = new URLSearchParams(window.location.search);
+                const utm = {};
+                const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id'];
+
+                keys.forEach(key => {
+                    if (params.has(key)) {
+                        utm[key] = params.get(key);
+                    }
+                });
+                return utm;
+            }
+
             form.addEventListener('submit', function (event) {
                 event.preventDefault();
                 event.stopPropagation();
 
-                if (form.checkValidity()) {
-                    // Form is valid
-                    window.location.href = 'gracias.html';
+                if (!form.checkValidity()) {
+                    form.classList.add('was-validated');
+                    return;
                 }
 
                 form.classList.add('was-validated');
+
+                // Prepare Payload
+                const formData = new FormData(form);
+                const data = {
+                    nombre: formData.get('nombre'),
+                    correo: formData.get('correo'),
+                    telefono: formData.get('telefono'),
+                    empresa: formData.get('empresa'),
+                    mensaje: formData.get('mensaje'),
+                    // Static Data
+                    api_key: "Q2xpZW50ZUlEOjozODI=",
+                    to: ["enrique.sanchez@futurite.com"],
+                    origen: "tornillos-roma"
+                };
+
+                // Add UTMs
+                const utm = getUTMParameters();
+                Object.assign(data, utm);
+
+                // Send POST Request
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn.innerText;
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Enviando...';
+
+                fetch('https://futurite.ongoing.mx/api/leads/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.href = 'gracias.html';
+                        } else {
+                            throw new Error('Network response was not ok.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Hubo un error al enviar su solicitud. Por favor intente nuevamente.');
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = originalBtnText;
+                    });
             });
 
             // Theme Toggle Logic
